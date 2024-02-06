@@ -14,22 +14,24 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QPushButton,
     QVBoxLayout,
+    QGridLayout,
     QWidget,
 )
 
 
 class CameraViewer(QMainWindow):
-    def __init__(self, camera_streams: list, frame_time_ms: int, save_dir: str):
+    def __init__(self, camera_streams: list, frame_time_ms: int, ncols: int, save_dir: str):
         """
         Main application window for viewing and saving frames from USB cameras.
 
         Parameters:
             - camera_streams (list): List of camera indices or stream sources.
             - frame_time_ms (int): Time in milliseconds between frame updates.
+            - ncols (int): Number of columns in display
             - save_dir (str): Directory to save captured images.
 
         Attributes:
-            - num_cameras (int): Number of cameras or streams.
+            - num_window_frames (int): Number of cameras or streams.
             - camera_streams (list): List of camera indices or stream sources.
             - cap_list (list): List of OpenCV VideoCapture objects for each camera.
             - save_dir (str): Directory to save captured images.
@@ -44,10 +46,7 @@ class CameraViewer(QMainWindow):
         # It ensures that the parent class's __init__ method is executed before the child class's
         # (__init__ of CameraViewer) to properly initialize the object with both classes' behavior and attributes.
         super(CameraViewer, self).__init__()
-
-        # Number of cameras or streams
-        self.num_cameras = len(camera_streams)
-
+        
         # List of camera indices or stream sources
         self.camera_streams = camera_streams.copy()
 
@@ -61,10 +60,19 @@ class CameraViewer(QMainWindow):
         # Set up the main window and widgets
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.layout = QVBoxLayout(self.central_widget)
-        self.labels = [QLabel() for _ in range(self.num_cameras)]
-        for label in self.labels:
-            self.layout.addWidget(label)
+
+        self.layout = QGridLayout(self.central_widget)
+
+        nrows = len(camera_streams) // ncols
+        if len(camera_streams) % ncols:
+            nrows += 1
+        self.num_window_frames = nrows * ncols
+        self.labels = [QLabel() for _ in range(self.num_window_frames)]
+
+        for i, label in enumerate(self.labels):
+            row, col = divmod(i, ncols)  
+            self.layout.addWidget(label, row, col)
+
 
         # Set up the timer for updating frames at regular intervals
         self.update_timer = QTimer(self)
@@ -110,7 +118,7 @@ class CameraViewer(QMainWindow):
         for i, cap in enumerate(self.cap_list):
             ret, frame = cap.read()
             if ret:
-                image_filename = f"{self.save_dir}/camera_{self.camera_streams[i]}_{current_datetime}.png"
+                image_filename = f"{self.save_dir}/camera_{self.camera_streams[i]}_{current_datetime}.tiff"
                 cv2.imwrite(image_filename, frame)
                 print(
                     f"Image from Camera {self.camera_streams[i]} saved as {image_filename}"
@@ -128,12 +136,13 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     # Specify camera streams, frame update time, and save directory
-    camera_streams = [1, 2, 3, 4]
+    camera_streams = [0, 1,2]#[1, 2, 3, 4]
     frame_time_ms = 50
+    ncols = 2
     save_dir = "images/"
 
     # Create and show the CameraViewer main window
-    main_window = CameraViewer(camera_streams, frame_time_ms, save_dir)
+    main_window = CameraViewer(camera_streams, frame_time_ms, ncols, save_dir)
     main_window.setWindowTitle("USB Camera Viewer")
     main_window.setGeometry(100, 100, 800, 600)
     main_window.show()

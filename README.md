@@ -21,4 +21,4 @@ You can specify the directory to save images (when you click gui button) as well
 
 
 ### TODO
--[ ] Add in argparse so don't need to edit display cameras file
+- [ ] Add in argparse so don't need to edit display cameras file
